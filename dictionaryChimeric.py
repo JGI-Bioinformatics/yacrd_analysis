@@ -4,7 +4,7 @@ from Bio.SeqRecord import SeqRecord
 chimericExciseAndSplit = True
 notCoveredExciseAndSplit = False
 # read through yacrd results and store them in a diction; key is the read name, value is the rest of the information for that read (i.e. type such as 'Chimeric', length of read, and the zero coverage region information)
-yacrdFile = open('smallYacrd.txt') #small is miniYacrd.txt
+yacrdFile = open('smallYacrd.txt')
 yacrdEntries = {}
 nameIndex = 1
 for line in yacrdFile:
@@ -24,7 +24,8 @@ for record in SeqIO.parse('newSmall.fastq', 'fastq'):
 			reg = yacrdEntries[identifier][2]
 			regions = []
 			regions.append(reg)
-		if yacrdEntries[identifier][0] == 'Chimeric':
+		# add check here to see if length of not covered valid region is more than 25% of read, if so then go into below if
+		if yacrdEntries[identifier][0] == 'Chimeric' or  yacrdEntries[identifier][0] == 'Not_covered':
 			print(record.name)
 			numSubset = 0
 			newReads = []
@@ -52,6 +53,13 @@ for record in SeqIO.parse('newSmall.fastq', 'fastq'):
 				if int(allSegmentInfo[index][2]) != len(record.seq):
 					l = [int(allSegmentInfo[index][2]) + 1, len(record.seq)]
 					indices.append(l)
+				if yacrdEntries[identifier][0] == 'Not_covered':
+					sectionsLengthSum = 0
+					for section in indices:
+						sectionsLengthSum = sectionsLengthSum + (int(section[1]) - int(section[0]))
+					if sectionsLengthSum < (.25 * int(yacrdEntries[identifier][1])):
+						print('entry ', identifier, ' does not meet 25% minimum coverage so it will not be added to the new fastq file.')
+						continue
 				for section in indices:
 					newRead = record.seq[int(section[0]):int(section[1])+1]
 					newQuality = record.letter_annotations['phred_quality'][int(section[0]):int(section[1])+1]
@@ -64,4 +72,4 @@ for record in SeqIO.parse('newSmall.fastq', 'fastq'):
 	else :
 		# write the original read directly to the file as is
 		recordsToWrite.append(record)
-SeqIO.write(recordsToWrite, 'smallOutput.fastq', 'fastq')
+SeqIO.write(recordsToWrite, 'smallOutput.fastq', 'fastq') #this one is for doing nothing with 'Not_covered'
