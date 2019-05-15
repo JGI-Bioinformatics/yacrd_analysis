@@ -4,17 +4,17 @@ from Bio.SeqRecord import SeqRecord
 chimericExciseAndSplit = True
 notCoveredExciseAndSplit = False
 # read through yacrd results and store them in a diction; key is the read name, value is the rest of the information for that read (i.e. type such as 'Chimeric', length of read, and the zero coverage region information)
-yacrdFile = open('smallYacrd.txt')
+#yacrdFile = open('smallYacrd.txt')
+yacrdFile = open('/global/projectb/scratch/ashleigh/chimeric/X0167/sequel/reads.yacrd')
 yacrdEntries = {}
 nameIndex = 1
 for line in yacrdFile:
 	line = line.strip().split()
 	value = [line[0], line[2], line[3]]
 	yacrdEntries[line[nameIndex]] = value
-	
 # read through fastq file, look up each read name in yacrdEntries to see if it is Chimeric or another type that needs changes
 recordsToWrite = []
-for record in SeqIO.parse('newSmall.fastq', 'fastq'):
+for record in SeqIO.parse('/global/projectb/scratch/ashleigh/chimeric/X0167/sequel/sequel.fastq', 'fastq'):
 	identifier = record.id
 	if identifier in yacrdEntries:
 		regions = ''
@@ -26,19 +26,19 @@ for record in SeqIO.parse('newSmall.fastq', 'fastq'):
 			regions.append(reg)
 		# add check here to see if length of not covered valid region is more than 25% of read, if so then go into below if
 		if yacrdEntries[identifier][0] == 'Chimeric' or  yacrdEntries[identifier][0] == 'Not_covered':
-			print(record.name)
+			#print(record.name)
 			numSubset = 0
 			newReads = []
 			if chimericExciseAndSplit:
 				startIndex = 0
 				indices = []
 				allSegmentInfo = []
-				print(len(regions))
+				#print(len(regions))
 				for segment in regions:
 					segmentInfo = segment.split(',')
 					if len(segmentInfo) != 3:
 						break
-					print(segmentInfo)
+					#print(segmentInfo)
 					allSegmentInfo.append(segmentInfo)
 				if len(allSegmentInfo) == 0:
 					continue
@@ -58,7 +58,7 @@ for record in SeqIO.parse('newSmall.fastq', 'fastq'):
 					for section in indices:
 						sectionsLengthSum = sectionsLengthSum + (int(section[1]) - int(section[0]))
 					if sectionsLengthSum < (.25 * int(yacrdEntries[identifier][1])):
-						print('entry ', identifier, ' does not meet 25% minimum coverage so it will not be added to the new fastq file.')
+						#print('entry ', identifier, ' does not meet 25% minimum coverage so it will not be added to the new fastq file.')
 						continue
 				for section in indices:
 					newRead = record.seq[int(section[0]):int(section[1])+1]
@@ -67,9 +67,9 @@ for record in SeqIO.parse('newSmall.fastq', 'fastq'):
 					newRecord = SeqRecord(Seq(str(newRead), record.seq.alphabet), id = record.id + '_' + str(numSubset), description = record.description + '_' + str(numSubset), name = name)
 					newRecord.letter_annotations['phred_quality'] = newQuality
 					recordsToWrite.append(newRecord)
-					print(name)
+					#print(name)
 					numSubset = numSubset + 1
 	else :
 		# write the original read directly to the file as is
 		recordsToWrite.append(record)
-SeqIO.write(recordsToWrite, 'smallOutput.fastq', 'fastq') #this one is for doing nothing with 'Not_covered'
+SeqIO.write(recordsToWrite, '/global/projectb/scratch/ashleigh/chimeric/X0167/sequel/dictionaryOutput.fastq', 'fastq') #this one is for doing nothing with 'Not_covered'
